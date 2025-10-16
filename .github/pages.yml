@@ -1,0 +1,72 @@
+# 工作流程的名称
+name: Deploy Hexo Site to Pages
+
+# 触发工作流程的事件
+# on:
+#   # 当推送到 main 分支时触发
+#   push:
+#     branches:
+#       - main # 或者你的主分支名，例如 master
+#   # 允许你手动在 Actions 选项卡中触发此工作流程
+#   workflow_dispatch:
+
+# 权限设置，允许此工作流程部署到 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 允许一个并发部署，推新的 commit 会取消正在运行的工作流程
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+# 定义一个名为 "build" 的作业（Job）
+jobs:
+  build:
+    # 指定运行环境
+    runs-on: ubuntu-latest
+    
+    # 作业的步骤
+    steps:
+      # 第 1 步：检出你的仓库代码
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取所有历史记录，以便正确获取创建/更新日期
+
+      # 第 2 步：设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # 建议使用最新的 LTS 版本
+          cache: "npm" # 缓存 npm 依赖，加快后续构建速度
+
+      # 第 3 步：安装依赖
+      - name: Install Dependencies
+        run: npm install
+
+      # 第 4 步：生成静态文件
+      - name: Build Static Files
+        run: hexo generate
+
+      # 第 5 步：上传构建产物（Artifact）
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 从 Hexo 默认的 public 目录上传
+          path: ./public
+
+  # 定义一个名为 "deploy" 的作业，用于部署
+  deploy:
+    # 依赖于 "build" 作业成功完成
+    needs: build
+    
+    # 运行环境
+    runs-on: ubuntu-latest
+    
+    # 部署步骤
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 # 使用官方的部署 Action
