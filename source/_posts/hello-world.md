@@ -1,5 +1,5 @@
 ---
-title: sb
+title: Hello World
 ---
 
 # GBC
